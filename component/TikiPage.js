@@ -33,7 +33,11 @@ function TikiPage({ navigation }) {
                 </View>
                 <View style={styles.sale}>
                     <TextInput placeholder="Mã giảm giá" style={styles.inputSale}></TextInput>
-                    <TouchableOpacity style={styles.ButtonAddSale}>
+                    <TouchableOpacity
+                        style={styles.ButtonAddSale}
+                        onPress={() => {
+                            navigation.navigate('ToDoList');
+                        }}>
                         <Text style={{ textAlign: 'center', paddingTop: '10%', color: '#fff', fontWeight: '600' }}>
                             Áp dụng
                         </Text>

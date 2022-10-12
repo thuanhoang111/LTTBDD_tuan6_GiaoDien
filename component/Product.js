@@ -1,11 +1,12 @@
 import { View, Image, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
 const Product = ({ item }) => {
+    console.log(item.url);
     return (
         <View style={styles.container}>
             <View style={styles.view}>
                 <Image
-                    source={require('../image/book.png')}
+                    source={{ uri: item.url }}
                     resizeMode="cover"
                     style={{ width: 100, height: 100, justifyContent: 'center' }}
                 />

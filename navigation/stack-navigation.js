@@ -5,6 +5,7 @@ import TikiPage from '../component/TikiPage';
 import Home from '../component/Home';
 import ForgotPassword from '../component/ForgotPassword';
 import ListProduct from './../component/ListProduct';
+import ToDoList from '../component/TH_tuan6/ToDoList';
 
 const Stack = createNativeStackNavigator();
 const StackNavigation = () => {
@@ -17,6 +18,7 @@ const StackNavigation = () => {
             <Stack.Navigator initialRouteName="TikiPage">
                 <Stack.Screen name="TikiPage" component={TikiPage} />
                 <Stack.Screen name="ListPage" component={ListProduct} />
+                <Stack.Screen name="ToDoList" component={ToDoList} />
             </Stack.Navigator>
         </NavigationContainer>
     );
