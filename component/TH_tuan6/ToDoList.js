@@ -1,9 +1,10 @@
 import { Text, TextInput, TouchableOpacity, View, FlatList, Image } from 'react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import ShowList from './ShowList';
 import * as ImagePicker from 'expo-image-picker';
 import { initializeApp } from 'firebase/app';
-import { getStorage, ref, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
+import { getStorage, ref, getDownloadURL, storage, uploadBytes, uploadBytesResumable } from 'firebase/storage';
+import axios from 'axios';
 const firebaseConfig = {
     apiKey: 'AIzaSyAdHX9EhKek9C_AFjT0gSAaChjpype9Oi0',
     authDomain: 'appchatzala.firebaseapp.com',
@@ -16,19 +17,38 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 // Initialize Cloud Storage and get a reference to the service
-const storage = getStorage(app, 'gs://appchatzala.appspot.com');
+const getStorage1 = getStorage(app, 'gs://appchatzala.appspot.com');
 
 function ToDoList() {
     const [listItem, setListItem] = useState([]);
     const [item, setItem] = useState('');
     const [image, setImage] = useState(null);
-    const [file, setFile] = useState({});
+
+    useEffect(() => {
+        axios
+            .get('https://634812480484786c6e9101bd.mockapi.io/todoApp')
+            .then(function (response) {
+                setListItem(response.data);
+            })
+            .catch(function (error) {
+                console.log(error);
+            })
+            .finally(function () {});
+    }, [listItem]);
 
     const handleDeleteItem = (index) => {
-        setListItem((prev) => {
-            const newJobs = prev.filter((item) => item.index !== index && item);
-            return newJobs;
-        });
+        axios
+            .delete(`https://634812480484786c6e9101bd.mockapi.io/todoApp/${index}`)
+            .then(function (response) {
+                setListItem((prev) => {
+                    prev.filter((item) => item.index !== index && item);
+                });
+            })
+            .catch(function (error) {
+                console.log(error);
+                // ToastAndroid.show("Không thế thêm");
+            })
+            .finally(function () {});
     };
 
     const handleView = ({ item }) => {
@@ -42,76 +62,71 @@ function ToDoList() {
     };
 
     const pickImage = async () => {
-        // No permissions request is necessary for launching the image library
         let result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.All,
             allowsEditing: true,
-            aspect: [4, 3],
+            // aspect: [4, 3],
+            width: 100,
             quality: 1,
         });
-
-        console.log(result);
-
         if (!result.cancelled) {
             setImage(result.uri);
         }
-        setFile(result);
     };
     const handleSubmit = async (uri) => {
-        // const blob = new Blob([uri], { type: `${uri.type}` });
-        // const fileRef = ref(storage, 'file.png');
-        // const uploadTask = uploadBytesResumable(fileRef, blob);
-
-        // await uploadTask.on(
-        //     'state_changed',
-        //     (snapshot) => {
-        //         // Observe state change events such as progress, pause, and resume
-        //         // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
-        //         const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        //         console.log('Upload is ' + progress + '% done');
-        //         switch (snapshot.state) {
-        //             case 'paused':
-        //                 console.log('Upload is paused');
-        //                 break;
-        //             case 'running':
-        //                 console.log('Upload is running');
-        //                 break;
-        //         }
-        //     },
-        //     (error) => {
-        //         // Handle unsuccessful uploads
-        //     },
-        //     () => {
-        //         // Handle successful uploads on complete
-        //         // For instance, get the download URL: https://firebasestorage.googleapis.com/...
-
-        //         getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-        //             console.log(downloadURL);
-        //             setListItem([
-        //                 ...listItem,
-        //                 {
-        //                     title: item,
-        //                     index: Date.now(),
-        //                     uri: downloadURL,
-        //                 },
-        //             ]);
-        //             setItem('');
-        //         });
-        //     },
-        // );
-        // // We're done with the blob, close and release it
-        // blob.close();
-        setListItem([
-            ...listItem,
-            {
-                title: item,
-                index: Date.now(),
-                uri: image,
+        const blob = await new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.onload = function () {
+                resolve(xhr.response);
+            };
+            xhr.onerror = function (e) {
+                console.log(e);
+                reject(new TypeError('Network request failed'));
+            };
+            xhr.responseType = 'blob';
+            xhr.open('GET', uri, true);
+            xhr.send(null);
+        });
+        const fileRef = ref(getStorage1, blob._data.name);
+        const uploadTask = uploadBytesResumable(fileRef, blob);
+        uploadTask.on(
+            'state_changed',
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                console.log('Upload is ' + progress + '% done');
+                switch (snapshot.state) {
+                    case 'paused':
+                        console.log('Upload is paused');
+                        break;
+                    case 'running':
+                        console.log('Upload is running');
+                        break;
+                }
             },
-        ]);
-        setItem('');
+            (error) => {},
+            () => {
+                getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+                    axios
+                        .post(`https://634812480484786c6e9101bd.mockapi.io/todoApp`, {
+                            title: item,
+                            index: Date.now(),
+                            uri: downloadURL,
+                        })
+                        .then(function (response) {
+                            console.log(response.data);
+                            setListItem([...listItem, response.data]);
+                            setImage('');
+                            setItem('');
+                        })
+                        .catch(function (error) {
+                            console.log(error);
+                        })
+                        .finally(function () {});
+                });
+            },
+        );
     };
-    console.log(listItem);
+
     return (
         <View>
             <View style={{ flex: 1, flexDirection: 'column' }}>
@@ -142,7 +157,7 @@ function ToDoList() {
                     <TouchableOpacity
                         style={{ borderColor: '#000', borderWidth: 5, borderRadius: 50, width: 50, height: 50 }}
                         onPress={() => {
-                            handleSubmit(file);
+                            handleSubmit(image);
                         }}>
                         <Text style={{ fontSize: 20, top: 4, left: 12 }}>+</Text>
                     </TouchableOpacity>
